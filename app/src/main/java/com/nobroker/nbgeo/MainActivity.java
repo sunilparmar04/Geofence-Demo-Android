@@ -1,3 +1,5 @@
+
+
 package com.nobroker.nbgeo;
 
 import android.Manifest;
@@ -7,20 +9,28 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
+
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -35,7 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements OnCompleteListener<Void>, OnMapReadyCallback {
+public class MainActivity extends AppCompatActivity implements OnCompleteListener<Void>, OnMapReadyCallback, LocationListener {
     public static HashMap<String, LatLng> reminder_address = new HashMap<>();
     private ArrayList<Geofence> mGeofenceList = new ArrayList<>();
     private PendingIntent mGeofencePendingIntent;
@@ -43,64 +53,66 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
     private GeofencingClient mGeofencingClient;
     private GoogleMap googleMap;
     private CircleOptions mCircleOptions;
+    private LocationManager locationManager;
+    private static final long MIN_TIME = 400;
+    private static final float MIN_DISTANCE = 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mGeofencePendingIntent = null;
+        if (Util.isPermissionRequired(this)) {
+            Util.requestPermission(this, REQUEST_PERMISSIONS_REQUEST_CODE);
+        } else {
 
-        mGeofencingClient = LocationServices.getGeofencingClient(this);
+            initMap();
 
-        requestPermissions();
+        }
 
         findViewById(R.id.btnAddGeofence).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                /*if (!checkPermissions()) {
-                    requestPermissions();
+                if (Util.isPermissionRequired(MainActivity.this)) {
+                    Util.requestPermission(MainActivity.this, REQUEST_PERMISSIONS_REQUEST_CODE);
                 } else {
-                    addGeofences();
-                }*/
-
-                Intent intent = new Intent(MainActivity.this, AddGeoFenceActivity.class);
-                startActivityForResult(intent, 124);
+                    // addGeofences();
+                    Intent intent = new Intent(MainActivity.this, AddGeoFenceActivity.class);
+                    startActivityForResult(intent, 124);
+                }
             }
         });
 
 
+    }
+
+
+    private void initMap() {
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        addLocationReminder();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME, MIN_DISTANCE, this); //You can also use LocationManager.GPS_PROVIDER and LocationManager.PASSIVE_PROVIDER
+        }
+    }
+
+    private void initGeofencingClient() {
+        mGeofencePendingIntent = getGeofencePendingIntent();
+
+        mGeofencingClient = LocationServices.getGeofencingClient(this);
+
     }
 
     private void addLocationReminder() {
-        reminder_address.clear();
-        SharedPreferences pre = getSharedPreferences(
-                "source_destination",
-                Context.MODE_PRIVATE);
+        reminder_address.put("meeting_1", new LatLng(12.914514485488262, 77.67657458782196));
 
-
-        String latitude_source = pre.getString("latitude_source", "");
-        String logtitude_source = pre.getString("logtitude_source", "");
-
-        if (!TextUtils.isEmpty(latitude_source) && !TextUtils.isEmpty(logtitude_source)) {
-            reminder_address.put("meeting_1", new LatLng(Double.valueOf(latitude_source), Double.valueOf(logtitude_source)));
-        }
-
-        if (reminder_address.size() > 0) {
-            populateGeofenceList();
-
-        }
-
+        populateGeofenceList();
     }
 
 
     private void populateGeofenceList() {
-        mGeofenceList.clear();
         for (Map.Entry<String, LatLng> entry : reminder_address.entrySet()) {
 
             mGeofenceList.add(new Geofence.Builder()
@@ -127,55 +139,21 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
                     // Create the geofence.
                     .build());
         }
-
-        addGeofences();
     }
 
 
     @SuppressWarnings("MissingPermission")
     private void addGeofences() {
-        if (!checkPermissions()) {
+        if (Util.isPermissionRequired(this)) {
 
             Toast.makeText(this, R.string.insufficient_permissions, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        mGeofencingClient.addGeofences(getGeofencingRequest(), getGeofencePendingIntent())
+        mGeofencingClient.addGeofences(getGeofencingRequest(), mGeofencePendingIntent)
                 .addOnCompleteListener(this);
     }
 
-    /**
-     * Return the current state of the permissions needed.
-     */
-    private boolean checkPermissions() {
-        int permissionState = ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION);
-        return permissionState == PackageManager.PERMISSION_GRANTED;
-    }
-
-
-    private void requestPermissions() {
-        boolean shouldProvideRationale =
-                ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION);
-
-        // Provide an additional rationale to the user. This would happen if the user denied the
-        // request previously, but didn't check the "Don't ask again" checkbox.
-        if (shouldProvideRationale) {
-
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    REQUEST_PERMISSIONS_REQUEST_CODE);
-        } else {
-
-            // Request permission. It's possible this can be auto answered if device policy
-            // sets the permission in a given state or the user denied the permission
-            // previously and checked "Never ask again".
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    REQUEST_PERMISSIONS_REQUEST_CODE);
-        }
-    }
 
     private GeofencingRequest getGeofencingRequest() {
         GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
@@ -213,16 +191,23 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
 
         if (googleMap != null) {
             this.googleMap = googleMap;
-            googleMap.setMyLocationEnabled(true);
-            drawcircle();
-        }
 
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                googleMap.setMyLocationEnabled(true);
+            }
+            checkLocalData();
+        }
 
     }
 
 
     private void drawcircle() {
-        googleMap.clear();
+        if (googleMap == null) {
+            return;
+        } else {
+            googleMap.clear();
+        }
+
         for (Map.Entry entry : reminder_address.entrySet()) {
             Log.v("TrackReminderActivity", "reminder dtails==" + entry.getKey() + entry.getValue());
 
@@ -244,17 +229,112 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
+
+            if (!Util.isPermissionRequired(MainActivity.this)) {
+                initMap();
+                initGeofencingClient();
+            }
+        }
+
+    }
+
+
+    private void checkLocalData() {
+
+        SharedPreferences pre = getSharedPreferences(
+                "source_destination",
+                Context.MODE_PRIVATE);
+
+        String latitude_source = pre.getString("latitude_source", "");
+        String logtitude_source = pre.getString("logtitude_source", "");
+
+        if (!TextUtils.isEmpty(latitude_source) && !TextUtils.isEmpty(logtitude_source)) {
+            reminder_address.clear();
+            reminder_address.put("meeting_1", new LatLng(Double.valueOf(latitude_source), Double.valueOf(logtitude_source)));
+            if (reminder_address.size() > 0) {
+                populateGeofenceList();
+                drawcircle();
+            }
+            initGeofencingClient();
+            addGeofences();
+        }
+
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode == RESULT_OK && requestCode == 124) {
-
-            addLocationReminder();
-            drawcircle();
-
-
+            checkLocalData();
         }
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.v("my_location", "" + location);
+        if (location != null & googleMap != null) {
+            LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, 15);
+            googleMap.animateCamera(cameraUpdate);
+            locationManager.removeUpdates(this);
+        }
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.geofence_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.clearGeofence:
+                removedGeofence();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void removedGeofence(){
+        if(googleMap!=null){
+            googleMap.clear();
+        }
+
+
+        if(mGeofencingClient!=null){
+            SharedPreferences pre = getSharedPreferences(
+                    "source_destination",
+                    Context.MODE_PRIVATE);
+            pre.edit().clear().commit();
+            mGeofencingClient.removeGeofences(mGeofencePendingIntent);
+            Toast.makeText(MainActivity.this,"geofence cleared successfully",Toast.LENGTH_SHORT).show();
+        }
+
     }
 }
