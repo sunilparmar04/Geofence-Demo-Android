@@ -258,13 +258,12 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
             reminder_address.clear();
             reminder_address.put("meeting_1", new LatLng(Double.valueOf(latitude_source), Double.valueOf(logtitude_source)));
             if (reminder_address.size() > 0) {
-                //populateGeofenceList();
+                populateGeofenceList();
                 drawcircle();
             }
-            startOneMore(latitude_source,logtitude_source);
-            //initGeofencingClient();
-           // addGeofences();
-
+            //startOneMore(latitude_source,logtitude_source);
+            initGeofencingClient();
+            addGeofences();
 
 
         }
