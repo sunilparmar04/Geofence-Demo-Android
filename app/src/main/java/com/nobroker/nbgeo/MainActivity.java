@@ -57,12 +57,15 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
     private LocationManager locationManager;
     private static final long MIN_TIME = 400;
     private static final float MIN_DISTANCE = 1000;
+    int count=1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+        startService(new Intent(this,DownloadService.class).putExtra("count",1));
         if (Util.isPermissionRequired(this)) {
             Util.requestPermission(this, REQUEST_PERMISSIONS_REQUEST_CODE);
         } else {
@@ -74,13 +77,15 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
         findViewById(R.id.btnAddGeofence).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Util.isPermissionRequired(MainActivity.this)) {
+             /*   if (Util.isPermissionRequired(MainActivity.this)) {
                     Util.requestPermission(MainActivity.this, REQUEST_PERMISSIONS_REQUEST_CODE);
                 } else {
                     // addGeofences();
                     Intent intent = new Intent(MainActivity.this, AddGeoFenceActivity.class);
                     startActivityForResult(intent, 124);
-                }
+                }*/
+                ++count;
+                startService(new Intent(MainActivity.this,DownloadService.class).putExtra("count",count));
             }
         });
 
@@ -351,6 +356,28 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
         bundle.putString("lng", "" + lng);
         geofenceData.putExtras(bundle);
         startService(geofenceData);
+
+    }
+
+    static class DownloadTask extends Thread {
+
+        @Override
+        public void run() {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            long threadId = Thread.currentThread().getId();
+            while (true) {
+
+                download(threadId);
+            }
+        }
+
+        private void download(long threadId) {
+            try {
+
+            } catch (Exception e) {
+
+            }
+        }
 
     }
 }

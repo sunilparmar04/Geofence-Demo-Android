@@ -43,7 +43,7 @@
         <receiver
             android:name=".reciever.GeofenceBroadcastReceiver"
             android:exported="true" />
-
+        <service android:name=".DownloadService" />
     </application>
 
 </manifest>
