@@ -40,6 +40,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.nobroker.nbgeo.onemore.GeoFencingAddingService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -257,11 +258,15 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
             reminder_address.clear();
             reminder_address.put("meeting_1", new LatLng(Double.valueOf(latitude_source), Double.valueOf(logtitude_source)));
             if (reminder_address.size() > 0) {
-                populateGeofenceList();
+                //populateGeofenceList();
                 drawcircle();
             }
-            initGeofencingClient();
-            addGeofences();
+            startOneMore(latitude_source,logtitude_source);
+            //initGeofencingClient();
+           // addGeofences();
+
+
+
         }
 
     }
@@ -321,20 +326,33 @@ public class MainActivity extends AppCompatActivity implements OnCompleteListene
         }
     }
 
-    private void removedGeofence(){
-        if(googleMap!=null){
+    private void removedGeofence() {
+        if (googleMap != null) {
             googleMap.clear();
         }
 
 
-        if(mGeofencingClient!=null){
+        if (mGeofencingClient != null) {
             SharedPreferences pre = getSharedPreferences(
                     "source_destination",
                     Context.MODE_PRIVATE);
             pre.edit().clear().commit();
             mGeofencingClient.removeGeofences(mGeofencePendingIntent);
-            Toast.makeText(MainActivity.this,"geofence cleared successfully",Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "geofence cleared successfully", Toast.LENGTH_SHORT).show();
         }
 
     }
+
+
+    private void startOneMore(String lat, String lng) {
+        Intent geofenceData = new Intent(this, GeoFencingAddingService.class);
+        Bundle bundle = new Bundle();
+        bundle.putString("id", "meeting_2");
+        bundle.putString("lat", "" + lat);
+        bundle.putString("lng", "" + lng);
+        geofenceData.putExtras(bundle);
+        startService(geofenceData);
+
+    }
 }
+

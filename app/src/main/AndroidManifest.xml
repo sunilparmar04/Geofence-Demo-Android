@@ -38,6 +38,12 @@
             android:name=".AddGeoFenceActivity"
             android:screenOrientation="portrait" />
 
+        <service android:name=".onemore.GeoFencingAddingService" />
+
+        <receiver
+            android:name=".reciever.GeofenceBroadcastReceiver"
+            android:exported="true" />
+
     </application>
 
 </manifest>

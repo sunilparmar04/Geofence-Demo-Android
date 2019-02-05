@@ -46,7 +46,7 @@ import java.util.List;
  */
 public class GeofenceTransitionsIntentService extends IntentService {
 
-    private static final String TAG = "GeofenceTransitionsIS";
+    private static final String TAG = "one_more_service";
 
     /**
      * This constructor is required, and calls the super IntentService(String)
@@ -187,7 +187,9 @@ public class GeofenceTransitionsIntentService extends IntentService {
             case Geofence.GEOFENCE_TRANSITION_ENTER:
                 return getString(R.string.geofence_transition_entered);
             case Geofence.GEOFENCE_TRANSITION_EXIT:
-                return getString(R.string.geofence_transition_exited);
+                return getString(R.string.geofence_transition_dwell);
+            case Geofence.GEOFENCE_TRANSITION_DWELL:
+
             default:
                 return getString(R.string.unknown_geofence_transition);
         }
